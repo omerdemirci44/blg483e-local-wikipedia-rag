@@ -32,7 +32,7 @@ not implemented yet.
 ## Planned Stack
 
 - Python
-- Wikipedia API client
+- requests and BeautifulSoup for Wikipedia ingestion
 - Ollama
 - `nomic-embed-text` for local embeddings
 - `llama3.2:3b` for local answer generation
@@ -51,16 +51,14 @@ not implemented yet.
 - **Sprint 4**: implement query classification and retrieval.
 - **Sprint 5**: connect Ollama generation with retrieved context.
 - **Sprint 6**: build the Streamlit or CLI chat interface and polish docs.
+- **Sprint 7**: add one end-to-end local setup pipeline command.
 
 ## Basic Run Instructions
-
-These commands are placeholders for later sprints:
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-python -m src.app
 ```
 
 Before the final assistant can answer questions, Ollama must be running locally
@@ -69,6 +67,25 @@ and the planned models must be available:
 ```powershell
 ollama pull nomic-embed-text
 ollama pull llama3.2:3b
+```
+
+Run the full local setup pipeline:
+
+```powershell
+python -m src.pipeline
+```
+
+Useful setup variants:
+
+```powershell
+python -m src.pipeline --skip-ingest
+python -m src.pipeline --skip-ingest --skip-chunk
+```
+
+Run the chat app:
+
+```powershell
+streamlit run src/app.py
 ```
 
 ## Current Status
