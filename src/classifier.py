@@ -14,6 +14,51 @@ PLACE_QUERY = config.PLACES_CATEGORY
 BOTH_QUERY = "both"
 UNKNOWN_QUERY = "unknown"
 
+PERSON_TOPIC_HINTS_BY_KEYWORD = {
+    "electricity": ["Nikola Tesla"],
+    "alternating current": ["Nikola Tesla"],
+    "radioactivity": ["Marie Curie"],
+    "radium": ["Marie Curie"],
+    "polonium": ["Marie Curie"],
+    "relativity": ["Albert Einstein"],
+    "gravity": ["Isaac Newton"],
+    "evolution": ["Charles Darwin"],
+    "natural selection": ["Charles Darwin"],
+    "computing": ["Alan Turing", "Ada Lovelace"],
+    "computer": ["Alan Turing", "Ada Lovelace"],
+    "programming": ["Ada Lovelace"],
+    "civil rights": ["Martin Luther King Jr."],
+    "apartheid": ["Nelson Mandela"],
+    "renaissance": ["Leonardo da Vinci"],
+    "cubism": ["Pablo Picasso"],
+    "painting": ["Frida Kahlo", "Pablo Picasso", "Leonardo da Vinci"],
+    "football": ["Lionel Messi", "Cristiano Ronaldo"],
+    "soccer": ["Lionel Messi", "Cristiano Ronaldo"],
+    "music": ["Taylor Swift", "Wolfgang Amadeus Mozart"],
+    "symphony": ["Wolfgang Amadeus Mozart"],
+}
+
+PLACE_TOPIC_HINTS_BY_KEYWORD = {
+    "turkey": ["Hagia Sophia"],
+    "istanbul": ["Hagia Sophia"],
+    "france": ["Eiffel Tower", "Louvre Museum"],
+    "paris": ["Eiffel Tower", "Louvre Museum"],
+    "china": ["Great Wall of China"],
+    "india": ["Taj Mahal"],
+    "italy": ["Colosseum"],
+    "rome": ["Colosseum"],
+    "jordan": ["Petra"],
+    "greece": ["Acropolis of Athens"],
+    "athens": ["Acropolis of Athens"],
+    "japan": ["Mount Fuji"],
+    "australia": ["Sydney Opera House"],
+    "egypt": ["Pyramids of Giza"],
+    "nepal": ["Mount Everest"],
+    "highest mountain": ["Mount Everest"],
+    "waterfall": ["Niagara Falls"],
+    "opera house": ["Sydney Opera House"],
+}
+
 PERSON_KEYWORDS = {
     "biography",
     "born",
@@ -32,7 +77,7 @@ PERSON_KEYWORDS = {
     "leader",
     "king",
     "queen",
-}
+} | set(PERSON_TOPIC_HINTS_BY_KEYWORD)
 
 PLACE_KEYWORDS = {
     "where",
@@ -58,7 +103,7 @@ PLACE_KEYWORDS = {
     "australia",
     "japan",
     "greece",
-}
+} | set(PLACE_TOPIC_HINTS_BY_KEYWORD)
 
 COMPARISON_KEYWORDS = {
     "compare",

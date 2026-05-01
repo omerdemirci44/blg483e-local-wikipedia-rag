@@ -9,7 +9,15 @@ import sys
 from typing import Any
 
 from . import config
-from .classifier import BOTH_QUERY, PLACE_QUERY, PERSON_QUERY, UNKNOWN_QUERY, classify_query
+from .classifier import (
+    BOTH_QUERY,
+    PERSON_TOPIC_HINTS_BY_KEYWORD,
+    PLACE_QUERY,
+    PLACE_TOPIC_HINTS_BY_KEYWORD,
+    PERSON_QUERY,
+    UNKNOWN_QUERY,
+    classify_query,
+)
 from .embed_store import OllamaUnavailableError, get_ollama_embedding
 from .ingest import PEOPLE_TOPICS, PLACE_TOPICS
 
@@ -101,12 +109,20 @@ def get_title_hints(query: str, classification: dict[str, Any]) -> list[str]:
         if title not in titles:
             titles.append(title)
 
+    query_type = normalize_query_type(classification)
+    hint_maps: list[dict[str, list[str]]] = []
+    if query_type in {PERSON_QUERY, BOTH_QUERY, UNKNOWN_QUERY}:
+        hint_maps.append(PERSON_TOPIC_HINTS_BY_KEYWORD)
+    if query_type in {PLACE_QUERY, BOTH_QUERY, UNKNOWN_QUERY}:
+        hint_maps.append(PLACE_TOPIC_HINTS_BY_KEYWORD)
+
     normalized_query = normalize_query_text(query)
-    for keyword, hinted_titles in PLACE_HINTS_BY_KEYWORD.items():
-        if f" {keyword} " in normalized_query:
-            for title in hinted_titles:
-                if title not in titles:
-                    titles.append(title)
+    for hint_map in hint_maps:
+        for keyword, hinted_titles in hint_map.items():
+            if f" {keyword} " in normalized_query:
+                for title in hinted_titles:
+                    if title not in titles:
+                        titles.append(title)
 
     return titles
 

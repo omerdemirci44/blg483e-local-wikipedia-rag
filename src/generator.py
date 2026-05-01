@@ -164,6 +164,7 @@ def answer_query(query: str, top_k: int = config.DEFAULT_TOP_K) -> dict[str, Any
 
     if should_skip_generation(classification):
         answer = UNSUPPORTED_ANSWER
+        chunks = []
     else:
         answer = generate_answer(query, chunks)
 
