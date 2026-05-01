@@ -31,7 +31,7 @@ COLLECTION_NAME = "wikipedia_people_places"
 EMBEDDING_MODEL = "nomic-embed-text"
 LLM_MODEL = "llama3.2:3b"
 OLLAMA_BASE_URL = "http://localhost:11434"
-DEFAULT_TOP_K = 4
+DEFAULT_TOP_K = 5
 
 # TODO: Sprint 2 - tune chunk size and overlap after sample ingestion.
 # TODO: Sprint 3 - confirm local model names against the installed Ollama setup.
