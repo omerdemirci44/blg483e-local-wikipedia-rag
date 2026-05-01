@@ -16,6 +16,7 @@ from typing import Any
 from urllib.parse import quote
 
 from . import config
+from .text_cleanup import cleanup_text
 
 
 WIKIPEDIA_BASE_URL = "https://en.wikipedia.org/wiki/"
@@ -119,7 +120,8 @@ def clean_paragraph_text(text: str) -> str:
     """Remove citation markers and normalize whitespace from paragraph text."""
 
     without_citations = re.sub(r"\[\d+\]", "", text)
-    return re.sub(r"\s+", " ", without_citations).strip()
+    normalized = re.sub(r"\s+", " ", without_citations).strip()
+    return cleanup_text(normalized)
 
 
 def extract_article_text(html: str) -> str:
@@ -176,9 +178,9 @@ def fetch_wikipedia_article(title: str, session: Any | None = None) -> dict[str,
         timeout=REQUEST_TIMEOUT_SECONDS,
     )
     response.raise_for_status()
-    response.encoding = "utf-8"
 
-    text = extract_article_text(response.text)
+    html = response.content.decode("utf-8", errors="replace")
+    text = cleanup_text(extract_article_text(html))
     word_count = count_words(text)
     if word_count < MIN_ARTICLE_WORDS:
         raise ValueError(f"extracted only {word_count} words")

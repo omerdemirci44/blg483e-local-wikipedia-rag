@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from . import config
+from .text_cleanup import find_mojibake_artifacts, cleanup_text
 
 
 CHUNKS_OUTPUT_PATH = config.PROCESSED_DATA_DIR / "chunks.jsonl"
@@ -35,7 +36,57 @@ def slugify_title(title: str) -> str:
 def normalize_text(text: str) -> str:
     """Normalize document text before splitting into character chunks."""
 
-    return re.sub(r"\s+", " ", text).strip()
+    cleaned = cleanup_text(text)
+    return re.sub(r"\s+", " ", cleaned).strip()
+
+
+def choose_chunk_end(text: str, start: int, max_end: int, chunk_size: int) -> int:
+    """Choose a chunk end near a sentence or whitespace boundary."""
+
+    if max_end >= len(text):
+        return len(text)
+
+    min_end = start + max(1, int(chunk_size * 0.6))
+    min_end = min(min_end, max_end)
+
+    sentence_window_start = max(min_end, max_end - 240)
+    sentence_candidates = [
+        text.rfind(boundary, sentence_window_start, max_end)
+        for boundary in (". ", "! ", "? ", "; ")
+    ]
+    sentence_end = max(sentence_candidates)
+    if sentence_end >= min_end:
+        return sentence_end + 1
+
+    whitespace_window_start = max(min_end, max_end - 120)
+    whitespace_end = text.rfind(" ", whitespace_window_start, max_end)
+    if whitespace_end >= min_end:
+        return whitespace_end
+
+    return max_end
+
+
+def choose_chunk_start(text: str, start: int) -> int:
+    """Move a chunk start to a nearby word boundary when possible."""
+
+    if start <= 0 or start >= len(text):
+        return max(0, min(start, len(text)))
+    if text[start].isspace():
+        return start + 1
+    if text[start - 1].isspace():
+        return start
+
+    backward_limit = max(0, start - 40)
+    previous_space = text.rfind(" ", backward_limit, start)
+    if previous_space >= backward_limit:
+        return previous_space + 1
+
+    forward_limit = min(len(text), start + 40)
+    next_space = text.find(" ", start, forward_limit)
+    if next_space != -1:
+        return next_space + 1
+
+    return start
 
 
 def load_raw_documents(
@@ -84,13 +135,21 @@ def chunk_text(
     text_length = len(normalized)
 
     while start < text_length:
-        end = min(start + chunk_size, text_length)
-        chunks.append(normalized[start:end])
+        max_end = min(start + chunk_size, text_length)
+        end = choose_chunk_end(normalized, start, max_end, chunk_size)
+        if end <= start:
+            end = max_end
+
+        chunk = normalized[start:end].strip()
+        if chunk:
+            chunks.append(chunk)
 
         if end == text_length:
             break
 
-        start = end - chunk_overlap
+        next_start = max(end - chunk_overlap, start + 1)
+        adjusted_start = choose_chunk_start(normalized, next_start)
+        start = adjusted_start if adjusted_start > start else next_start
 
     return chunks
 
@@ -145,6 +204,30 @@ def save_chunks_jsonl(
     return output_path
 
 
+def validate_chunks(
+    chunks: list[dict[str, Any]],
+    chunk_size: int = config.CHUNK_SIZE,
+) -> dict[str, Any]:
+    """Run lightweight quality checks on generated chunks."""
+
+    empty_chunks = [chunk["chunk_id"] for chunk in chunks if not chunk["text"].strip()]
+    oversized_chunks = [
+        chunk["chunk_id"] for chunk in chunks if chunk["char_count"] > chunk_size
+    ]
+    mojibake_hits: dict[str, list[str]] = {}
+
+    for chunk in chunks:
+        artifacts = find_mojibake_artifacts(chunk["text"])
+        if artifacts:
+            mojibake_hits[chunk["chunk_id"]] = artifacts
+
+    return {
+        "empty_chunks": empty_chunks,
+        "oversized_chunks": oversized_chunks,
+        "mojibake_hits": mojibake_hits,
+    }
+
+
 def run_chunking(
     output_path: Path = CHUNKS_OUTPUT_PATH,
     chunk_size: int = config.CHUNK_SIZE,
@@ -165,6 +248,7 @@ def run_chunking(
         )
 
     saved_path = save_chunks_jsonl(chunks, output_path=output_path)
+    validation = validate_chunks(chunks, chunk_size=chunk_size)
     document_count = len(documents)
     average_chunks = len(chunks) / document_count if document_count else 0
 
@@ -173,6 +257,7 @@ def run_chunking(
         "chunks_created": len(chunks),
         "output_path": saved_path,
         "average_chunks_per_document": average_chunks,
+        "validation": validation,
     }
 
 
@@ -204,6 +289,13 @@ def print_chunking_summary(summary: dict[str, Any]) -> None:
         "Average chunks per document: "
         f"{summary['average_chunks_per_document']:.2f}"
     )
+    validation = summary["validation"]
+    issue_count = (
+        len(validation["empty_chunks"])
+        + len(validation["oversized_chunks"])
+        + len(validation["mojibake_hits"])
+    )
+    print(f"Validation issues: {issue_count}")
 
 
 def main() -> None:
