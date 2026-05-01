@@ -149,6 +149,33 @@ def query_collection(
     return format_retrieval_results(collection.query(**query_args))
 
 
+def get_intro_chunk(collection: Any, title: str) -> dict[str, Any] | None:
+    """Return chunk 0 for a known title when it exists."""
+
+    result = collection.get(
+        where={"$and": [{"title": title}, {"chunk_index": 0}]},
+        include=["documents", "metadatas"],
+        limit=1,
+    )
+    ids = result.get("ids", [])
+    if not ids:
+        return None
+
+    metadata = result.get("metadatas", [{}])[0] or {}
+    document = result.get("documents", [""])[0]
+    return {
+        "chunk_id": ids[0],
+        "title": metadata.get("title", ""),
+        "type": metadata.get("type", ""),
+        "source_url": metadata.get("source_url", ""),
+        "chunk_index": metadata.get("chunk_index", 0),
+        "word_count": metadata.get("word_count", 0),
+        "char_count": metadata.get("char_count", 0),
+        "text": document,
+        "distance": None,
+    }
+
+
 def deduplicate_chunks(chunks: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Remove duplicate chunk ids while preserving order."""
 
@@ -212,8 +239,14 @@ def retrieve_context(
     if isinstance(classification, dict):
         title_hints = get_title_hints(query, classification)
         if title_hints:
-            base_count = max(1, top_k // len(title_hints))
-            remainder = top_k % len(title_hints)
+            for title in title_hints:
+                intro_chunk = get_intro_chunk(collection, title)
+                if intro_chunk is not None:
+                    retrieved_chunks.append(intro_chunk)
+
+            remaining_count = max(0, top_k - len(retrieved_chunks))
+            base_count = max(1, remaining_count // len(title_hints))
+            remainder = remaining_count % len(title_hints)
             for index, title in enumerate(title_hints):
                 per_title_count = base_count + (1 if index < remainder else 0)
                 retrieved_chunks.extend(
