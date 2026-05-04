@@ -12,7 +12,11 @@ local embeddings with Ollama, stores vectors in Chroma, retrieves relevant
 context, and generates grounded answers with a local Ollama language model. No
 OpenAI API, hosted LLM API, or external embedding API is used.
 
-Demo video link: TODO
+## Submission Information
+
+- Student: Ömer Talha Demirci
+- Student ID: 150210711
+- Demo video link: [Google Drive demo video](https://drive.google.com/file/d/1LODWnSY0MCbwfaRihb-prA3A0mBt34IW/view?usp=drive_link)
 
 ## What The System Does
 
